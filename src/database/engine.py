@@ -1,4 +1,3 @@
-from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from src.config.settings import settings
 
@@ -26,4 +25,4 @@ class DatabaseHelper:
             yield session
 
 
-db_helper = DatabaseHelper(settings.database_url)
+db_helper = DatabaseHelper(settings.db.database_url)

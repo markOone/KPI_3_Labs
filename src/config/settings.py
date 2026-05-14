@@ -2,9 +2,9 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class BaseAppSettings(BaseSettings):
+class DatabaseSettings(BaseSettings):
 
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     BASE_DIR: Path = Path(__file__).parent.parent
 
@@ -23,4 +23,22 @@ class BaseAppSettings(BaseSettings):
         )
 
 
-settings = BaseAppSettings()
+class AuthSettings(BaseSettings):
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    SECRET_KEY: str
+    ALGORITHM: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    REFRESH_TOKEN_EXPIRE_DAYS: int
+
+
+class AppSettings(BaseSettings):
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    db: DatabaseSettings = DatabaseSettings()
+    auth: AuthSettings = AuthSettings()
+
+
+settings = AppSettings()
