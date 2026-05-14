@@ -16,6 +16,6 @@ pip install -r requirements.txt
 
 ## 2. Запуск через Docker
 ```
-# Зібрати образи та запустити всі сервіси у фоні
-docker-compose up -d --build
+# Зібрати образи та запустити всі сервіси
+docker-compose up --build
 ```
