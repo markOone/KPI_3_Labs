@@ -7,9 +7,17 @@ from sqlalchemy import text
 from src.database.engine import db_helper
 from fastapi import Depends, HTTPException
 
+from src.api import products
+from src.api import categories
 
-app = FastAPI()
+app = FastAPI(
+    title="E-commerce API",
+    description="API для E-commerce проєкту",
+    version="1.0.0"
+)
 
+app.include_router(products.router)
+app.include_router(categories.router)
 
 @app.get("/")
 def read_root():
