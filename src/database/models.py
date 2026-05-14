@@ -89,7 +89,7 @@ class Order(Base):
     total_price: Mapped[float] = mapped_column(Numeric(10, 2))
 
     user: Mapped["User"] = relationship(back_populates="orders")
-    items: Mapped[List["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")
+    items: Mapped[List["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan",lazy='selectin')
 
 class OrderItem(Base):
     __tablename__ = "order_items"

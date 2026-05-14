@@ -1,14 +1,11 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from typing import List
 from datetime import datetime
 
-class OrderItemResponse(BaseModel):
-    id: int
+class OrderItemOut(BaseModel):
     product_id: int
     quantity: float
     price_at_purchase: float
-
-    model_config = ConfigDict(from_attributes=True)
 
 class OrderResponse(BaseModel):
     id: int
@@ -16,6 +13,5 @@ class OrderResponse(BaseModel):
     status: str
     total_price: float
     created_at: datetime
-    items: List[OrderItemResponse]
-
-    model_config = ConfigDict(from_attributes=True)
+    items: List[OrderItemOut]
+    

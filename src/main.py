@@ -12,6 +12,7 @@ from src.api import categories
 from src.api import cart
 from src.api import orders
 from src.api import auth
+from src.api import stocks
 
 app = FastAPI(
     title="E-commerce API",
@@ -22,7 +23,7 @@ app = FastAPI(
 app.include_router(products.router)
 app.include_router(categories.router)
 app.include_router(auth.router)
-
+app.include_router(stocks.router)
 app.include_router(cart.router)
 app.include_router(orders.router)
 
