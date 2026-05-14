@@ -14,8 +14,19 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
 
+    group_id: Mapped[Optional[int]] = mapped_column(ForeignKey("user_groups.id"))
+    group: Mapped[Optional["UserGroup"]] = relationship(back_populates="users")
+
     cart: Mapped[Optional["Cart"]] = relationship(back_populates="user", uselist=False)
     orders: Mapped[List["Order"]] = relationship(back_populates="user")
+
+class UserGroup(Base):
+    tablename = "user_groups"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(50), unique=True)
+
+    users: Mapped[List["User"]] = relationship(back_populates="group")
 
 class Category(Base):
     __tablename__ = "categories"
