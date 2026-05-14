@@ -1,6 +1,6 @@
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy import text
+from sqlalchemy import select, text
 from src.exceptions.token import InvalidTokenError
 from src.config.settings import settings, AppSettings
 from src.database.models import User
@@ -24,28 +24,29 @@ async def get_jwt_manager(settings: AppSettings = Depends(get_settings)) -> JWTM
         refresh_token_expire_days=settings.auth.refresh_token_expire_days,
     )
 
-get_user_by_name = lambda db, username: db.execute(
-    text("SELECT * FROM users WHERE username = :username"),
-    {"username": username}
-).fetchone()
+async def get_user_by_name(username, db):
+    result = await db.execute(select(User).where(User.username == username))
+    return result.scalar_one_or_none()
 
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(db_helper.get_db_session),
-    jwt_manager: JWTManager = Depends(JWTManager),
+    jwt_manager: JWTManager = Depends(get_jwt_manager),
     settings: AppSettings = Depends(get_settings),
 ) -> User:
     try:
-        payload = jwt_manager.decode(
-            token, settings.auth.secret_key, algorithms=[settings.auth.algorithm]
+        payload = jwt_manager.decode_access_token(
+            token
         )
-        username: str = payload.get("sub")
+        print(payload)
+        username: str = payload.get("username")
         if username is None:
-            raise InvalidTokenError
-    except JWTError:
-        raise InvalidTokenError
-    user = await get_user_by_name(db, username=username)
+            raise InvalidTokenError("Token payload missing 'sub' field")
+    except JWTError as e:
+        raise InvalidTokenError(f"Token decode error: {e}")
+    user = await get_user_by_name(username, db)
     if user is None:
-        raise InvalidTokenError
+        raise InvalidTokenError(f"User not found")
+    print(user)
     return user

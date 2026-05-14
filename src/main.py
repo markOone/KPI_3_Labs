@@ -9,6 +9,8 @@ from fastapi import Depends, HTTPException
 
 from src.api import products
 from src.api import categories
+from src.api import cart
+from src.api import orders
 from src.api import auth
 
 app = FastAPI(
@@ -21,6 +23,8 @@ app.include_router(products.router)
 app.include_router(categories.router)
 app.include_router(auth.router)
 
+app.include_router(cart.router)
+app.include_router(orders.router)
 
 @app.get("/")
 def read_root():
