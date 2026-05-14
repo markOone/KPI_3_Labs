@@ -9,6 +9,7 @@ from fastapi import Depends, HTTPException
 
 from src.api import products
 from src.api import categories
+from src.api import auth
 
 app = FastAPI(
     title="E-commerce API",
@@ -18,6 +19,8 @@ app = FastAPI(
 
 app.include_router(products.router)
 app.include_router(categories.router)
+app.include_router(auth.router)
+
 
 @app.get("/")
 def read_root():
@@ -37,6 +40,5 @@ async def check_database_health(db: AsyncSession = Depends(db_helper.get_db_sess
     except Exception as e:
         logging.error(f"Database connection failed: {e}")
         raise HTTPException(
-            status_code=500, 
-            detail="Database is offline or unresponsive"
+            status_code=500, detail="Database is offline or unresponsive"
         )
