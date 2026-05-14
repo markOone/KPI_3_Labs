@@ -1,6 +1,8 @@
 services:
   server:
     build: .
+    volumes:
+      - .:/app
     ports:
       - "8004:8004"
     command: >
