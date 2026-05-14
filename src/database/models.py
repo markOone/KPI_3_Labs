@@ -21,7 +21,7 @@ class User(Base):
     orders: Mapped[List["Order"]] = relationship(back_populates="user")
 
 class UserGroup(Base):
-    tablename = "user_groups"
+    __tablename__ = "user_groups"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(50), unique=True)
