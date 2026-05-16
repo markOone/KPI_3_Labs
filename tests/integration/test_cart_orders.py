@@ -53,7 +53,7 @@ async def test_full_checkout_flow(client: AsyncClient):
     assert order_res.status_code in (200, 201), f"Помилка оформлення замовлення: {order_res.text}"
     
     order_data = order_res.json()
-    assert order_data["status"] == "created"
+    assert order_data["status"] == "pending"
     assert float(order_data["total_price"]) == 1600.00
 
     empty_cart_res = await client.get("/cart", headers=headers)

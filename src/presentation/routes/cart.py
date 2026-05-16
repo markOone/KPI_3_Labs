@@ -84,8 +84,10 @@ async def add_item_to_cart(
         raise HTTPException(status_code=500, detail="Failed to retrieve added item")
 
     return CartItemResponse(
-        id=added_item.id, product_id=added_item.product_id, quantity=added_item.quantity
-    )
+            id=added_item.id, 
+            product_id=added_item.product_id, 
+            quantity=int(added_item.quantity.value)
+        )
 
 
 @router.delete("/clear", status_code=status.HTTP_200_OK)

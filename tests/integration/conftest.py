@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 import sqlite3
 from decimal import Decimal
+from sqlalchemy.pool import StaticPool
 
 sqlite3.register_adapter(Decimal, float)
 
@@ -20,7 +21,12 @@ from src.infrastructure.database.models import Base
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
-engine_test = create_async_engine(TEST_DATABASE_URL, echo=False)
+engine_test = create_async_engine(
+    TEST_DATABASE_URL, 
+    echo=False,
+    poolclass=StaticPool,             
+    connect_args={"check_same_thread": False}   
+)
 test_async_session = async_sessionmaker(engine_test, class_=AsyncSession, expire_on_commit=False)
 
 async def override_get_db_session():
