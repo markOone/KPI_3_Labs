@@ -35,10 +35,12 @@ class ProductRepositoryImpl(ProductRepository):
             name=product.name,
             sku=product.sku.value,
             price=product.price.amount,
-            category_id=product.category_id
+            category_id=product.category_id,
         )
         self.session.add(orm_product)
-        await self.session.flush()
+        await self.session.commit()
+        await self.session.refresh(orm_product)
+
         product.id = orm_product.id
         return product
 
@@ -63,6 +65,6 @@ class ProductRepositoryImpl(ProductRepository):
 
         if orm_product:
             await self.session.delete(orm_product)
-            await self.session.flush()
+            await self.session.commit()
             return True
         return False
