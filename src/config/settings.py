@@ -37,12 +37,26 @@ class AuthSettings(BaseSettings):
     refresh_token_expire_days: int
 
 
+class AdminSettings(BaseSettings):
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore",
+        env_prefix="ADMIN_",
+    )
+
+    email: str
+    username: str
+    password: str
+
+
 class AppSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     db: DatabaseSettings = DatabaseSettings()
     auth: AuthSettings = AuthSettings()
+    admin: AdminSettings = AdminSettings()
 
 
 settings = AppSettings()
