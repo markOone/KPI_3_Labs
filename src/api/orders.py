@@ -6,101 +6,131 @@ from decimal import Decimal
 from datetime import datetime, timezone
 
 from src.database.engine import db_helper
-from src.database.models import Cart, CartItem, Order, OrderItem, Stock, Product
+from src.database.models import Cart, CartItem, Order, OrderItem, Stock, Product, User
 from src.schemas.orders import OrderResponse
 from src.config.dependencies import get_current_user
 
-router = APIRouter(
-    prefix="/orders",
-    tags=["Orders"]
-)
+router = APIRouter(prefix="/orders", tags=["Orders"])
 
-@router.post("/checkout", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
+
+@router.get("/", status_code=status.HTTP_200_OK)
+async def get_user_orders(
+    db: AsyncSession = Depends(db_helper.get_db_session),
+    user: User = Depends(get_current_user),
+):
+    orders_query = (
+        select(Order)
+        .options(joinedload(Order.items).joinedload(OrderItem.product))
+        .where(Order.user_id == user.id)
+        .order_by(Order.created_at.desc())
+    )
+    orders_result = await db.execute(orders_query)
+    orders = orders_result.unique().scalars().all()
+
+    return [
+        {
+            "order_id": order.id,
+            "status": order.status,
+            "total_price": float(order.total_price),
+            "created_at": order.created_at.isoformat(),
+            "items": [
+                {
+                    "product_id": item.product_id,
+                    "product_name": item.product.name,
+                    "quantity": item.quantity,
+                    "price_at_purchase": float(item.price_at_purchase),
+                }
+                for item in order.items
+            ],
+        }
+        for order in orders
+    ]
+
+
+@router.post(
+    "/checkout", response_model=OrderResponse, status_code=status.HTTP_201_CREATED
+)
 async def process_checkout(
     db: AsyncSession = Depends(db_helper.get_db_session),
-    user = Depends(get_current_user)
+    user: User = Depends(get_current_user),
 ):
-    # Витягуємо ID відразу
     u_id = user.id
-    
-    # ПЕРША ВАЖЛИВА ДІЯ: Від'єднуємо юзера від сесії, щоб він не спамив запитами
-    db.expunge(user) 
 
-    # 1. Отримуємо кошик
-    cart_res = await db.execute(select(Cart).where(Cart.user_id == u_id))
-    cart = cart_res.scalar_one_or_none()
-
-    if not cart:
-        raise HTTPException(status_code=400, detail="Кошик порожній")
-
-    # 2. Отримуємо товари
-    items_res = await db.execute(
-        select(CartItem)
-        .options(joinedload(CartItem.product))
-        .where(CartItem.cart_id == cart.id)
+    cart_res = await db.execute(
+        select(Cart)
+        .options(joinedload(Cart.items).joinedload(CartItem.product))
+        .where(Cart.user_id == u_id)
     )
-    cart_items = items_res.scalars().all()
+    cart = cart_res.unique().scalar_one_or_none()
+
+    if not cart or not cart.items:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Cart is empty"
+        )
 
     try:
-        # 3. Блокуємо сток
-        p_ids = [i.product_id for i in cart_items]
+        p_ids = [item.product_id for item in cart.items]
         stock_res = await db.execute(
             select(Stock).where(Stock.product_id.in_(p_ids)).with_for_update()
         )
         stock_map = {s.product_id: s for s in stock_res.scalars().all()}
 
-        total = Decimal("0.0")
-        items_data = []
+        total_price = Decimal("0.0")
+        order_items_payload = []
 
-        for ci in cart_items:
-            s = stock_map.get(ci.product_id)
-            if not s or s.quantity < ci.quantity:
-                await db.rollback()
-                raise HTTPException(status_code=409, detail="Недостатньо товару")
+        for item in cart.items:
+            stock = stock_map.get(item.product_id)
 
-            s.quantity -= ci.quantity
-            p = Decimal(str(ci.product.price))
-            total += p * Decimal(str(ci.quantity))
-            
-            items_data.append({
-                "product_id": ci.product_id,
-                "quantity": float(ci.quantity),
-                "price_at_purchase": float(p)
-            })
+            if not stock or stock.quantity < item.quantity:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Product {item.product.name} is out of stock or quantity changed",
+                )
 
-        # 4. Інсертимо через Core (найбезпечніший шлях)
-        now = datetime.now(timezone.utc)
-        order_stmt = insert(Order).values(
-            user_id=u_id, status="created", total_price=total, created_at=now
-        ).returning(Order.id)
-        
-        o_res = await db.execute(order_stmt)
-        new_order_id = o_res.scalar_one()
+            stock.quantity -= item.quantity
 
-        for d in items_data:
-            d["order_id"] = new_order_id
-        
-        await db.execute(insert(OrderItem).values(items_data))
+            item_price = Decimal(str(item.product.price))
+            total_price += item_price * Decimal(str(item.quantity))
+
+            order_items_payload.append(
+                {
+                    "product_id": item.product_id,
+                    "quantity": item.quantity,
+                    "price_at_purchase": item_price,
+                }
+            )
+
+        new_order = Order(
+            user_id=u_id,
+            status="created",
+            total_price=total_price,
+            created_at=datetime.now(timezone.utc),
+        )
+        db.add(new_order)
+        await db.flush()
+
+        for data in order_items_payload:
+            db.add(
+                OrderItem(
+                    order_id=new_order.id,
+                    product_id=data["product_id"],
+                    quantity=data["quantity"],
+                    price_at_purchase=data["price_at_purchase"],
+                )
+            )
+
         await db.execute(delete(CartItem).where(CartItem.cart_id == cart.id))
 
-        # 5. ФІНАЛЬНИЙ СЛОВНИК
-        resp_dict = {
-            "id": new_order_id,
-            "user_id": u_id,
-            "status": "created",
-            "total_price": float(total),
-            "created_at": now,
-            "items": items_data
-        }
-
         await db.commit()
-        
-        # ДРУГА ВАЖЛИВА ДІЯ: Очищуємо сесію повністю перед поверненням
-        db.expunge_all()
+        await db.refresh(new_order)
 
-        return resp_dict
+        return new_order
 
     except Exception as e:
         await db.rollback()
-        if isinstance(e, HTTPException): raise e
-        raise HTTPException(status_code=500, detail=f"Критична помилка: {str(e)}")
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Transaction failed during checkout",
+        )
