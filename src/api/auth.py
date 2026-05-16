@@ -41,6 +41,7 @@ async def register(
             username=data.username,
             email=data.email,
             password_hash=Hasher.get_password_hash(data.password),
+            group_id=2,  # default to regular user group
         )
         db.add(new_user)
         await db.commit()
