@@ -78,10 +78,11 @@ async def add_item_to_cart(
         cart = Cart(user_id=user.id)
         db.add(cart)
         await db.flush()
-
-    existing_item = next(
-        (item for item in cart.items if item.product_id == item_in.product_id), None
-    )
+        existing_item = None
+    else:
+        existing_item = next(
+            (item for item in cart.items if item.product_id == item_in.product_id), None
+        )
 
     if existing_item:
         existing_item.quantity += item_in.quantity
