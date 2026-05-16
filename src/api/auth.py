@@ -1,13 +1,12 @@
 import logging
-from fastapi import APIRouter, FastAPI, Depends, HTTPException, Response, status
+from fastapi import APIRouter, FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, text
+from sqlalchemy import select
 from src.auth.hashing import Hasher
 from src.config.dependencies import get_current_user, get_jwt_manager
 from src.schemas.auth import (
     TokenResponse,
-    UserLoginSchema,
     UserRegisterSchema,
     UserResponseSchema,
 )
