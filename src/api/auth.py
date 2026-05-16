@@ -38,7 +38,7 @@ async def register(
         return {"status": "success"}
     except Exception as e:
         logging.error(f"Error during registration: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=400, detail="Registration failed")
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -47,26 +47,32 @@ async def login(
     db: AsyncSession = Depends(db_helper.get_db_session),
     jwt_manager=Depends(get_jwt_manager),
 ):
-    result = await db.execute(select(User).where(User.username == data.username))
-    user = result.scalar_one_or_none()
+    try:
+        result = await db.execute(select(User).where(User.username == data.username))
+        user = result.scalar_one_or_none()
 
-    if not user or not Hasher.verify_password(data.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-        )
+        if not user or not Hasher.verify_password(data.password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+            )
 
-    payload = {"sub": str(user.id), "username": user.username}
+        payload = {"sub": str(user.id), "username": user.username}
 
-    return {
-        "access_token": jwt_manager.create_access_token(data=payload),
-        "refresh_token": jwt_manager.create_refresh_token(data=payload),
-        "token_type": "bearer",
-    }
+        return {
+            "access_token": jwt_manager.create_access_token(data=payload),
+            "refresh_token": jwt_manager.create_refresh_token(data=payload),
+            "token_type": "bearer",
+        }
+    except Exception as e:
+        logging.error(f"Error during login: {e}")
+        raise HTTPException(status_code=400, detail="Login failed")
 
 
 @router.get("/me", response_model=UserResponseSchema)
 async def read_users_me(
     current_user: User = Depends(get_current_user),
 ):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     return current_user
