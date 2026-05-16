@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import String, ForeignKey, Numeric, DateTime, func
+from sqlalchemy import Integer, String, ForeignKey, Numeric, DateTime, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 class Base(DeclarativeBase):
@@ -55,7 +55,7 @@ class Stock(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), unique=True)
-    quantity: Mapped[float] = mapped_column(Numeric(10, 3), default=0)
+    quantity: Mapped[float] = mapped_column(Integer, default=0)
 
     product: Mapped["Product"] = relationship(back_populates="stock")
 
