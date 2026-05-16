@@ -7,23 +7,15 @@ from sqlalchemy import text
 from src.database.engine import db_helper
 from fastapi import Depends, HTTPException
 
-from src.api import products
-from src.api import categories
-from src.api import cart
-from src.api import orders
-from src.api import auth
-from src.api import stocks
+# New presentation layer routes
+from src.presentation.routes import products
 
 app = FastAPI(
     title="E-commerce API", description="API для E-commerce проєкту", version="1.0.0"
 )
 
+# Include new presentation routes
 app.include_router(products.router)
-app.include_router(categories.router)
-app.include_router(auth.router)
-app.include_router(stocks.router)
-app.include_router(cart.router)
-app.include_router(orders.router)
 
 
 @app.get("/health")
