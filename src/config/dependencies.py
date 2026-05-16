@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth.services import JWTManager
 from jose import JWTError
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
 async def get_settings() -> AppSettings:
@@ -24,6 +24,7 @@ async def get_jwt_manager(settings: AppSettings = Depends(get_settings)) -> JWTM
         refresh_token_expire_days=settings.auth.refresh_token_expire_days,
     )
 
+
 async def get_user_by_name(username, db):
     result = await db.execute(select(User).where(User.username == username))
     return result.scalar_one_or_none()
@@ -33,12 +34,9 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(db_helper.get_db_session),
     jwt_manager: JWTManager = Depends(get_jwt_manager),
-    settings: AppSettings = Depends(get_settings),
 ) -> User:
     try:
-        payload = jwt_manager.decode_access_token(
-            token
-        )
+        payload = jwt_manager.decode_access_token(token)
         print(payload)
         username: str = payload.get("username")
         if username is None:
