@@ -1,5 +1,6 @@
 import logging
-from fastapi import APIRouter, FastAPI, Depends, HTTPException, status
+from email_validator import validate_email, EmailNotValidError
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -22,11 +23,20 @@ async def register(
     data: UserRegisterSchema, db: AsyncSession = Depends(db_helper.get_db_session)
 ):
     try:
-        query = select(User).where((User.email == data.email))
-        result = await db.execute(query)
-        if result.scalar_one_or_none():
-            raise HTTPException(status_code=400, detail="User already exists")
+        validate_email(data.email, check_deliverability=False)
+    except EmailNotValidError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid email: {str(e)}"
+        )
 
+    query = select(User).where(User.email == data.email)
+    result = await db.execute(query)
+    if result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="User already exists"
+        )
+
+    try:
         new_user = User(
             username=data.username,
             email=data.email,
@@ -36,8 +46,12 @@ async def register(
         await db.commit()
         return {"status": "success"}
     except Exception as e:
-        logging.error(f"Error during registration: {e}")
-        raise HTTPException(status_code=400, detail="Registration failed")
+        await db.rollback()
+        logging.error(f"Registration error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Registration failed",
+        )
 
 
 @router.post("/login", response_model=TokenResponse)
