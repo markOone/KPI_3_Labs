@@ -1,27 +1,27 @@
 import logging
-from typing import Union
-
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from src.database.engine import db_helper
-from fastapi import Depends, HTTPException
 
-# New presentation layer routes
-from src.presentation.routes import products
+from src.presentation.routes import products, auth, cart, categories, orders, stocks
 
 app = FastAPI(
-    title="E-commerce API", description="API для E-commerce проєкту", version="1.0.0"
+    title="E-commerce API", 
+    description="API для E-commerce проєкту (Clean Layered Architecture)", 
+    version="2.0.0"
 )
 
-# Include new presentation routes
 app.include_router(products.router)
-
+app.include_router(auth.router)
+app.include_router(cart.router)
+app.include_router(categories.router)
+app.include_router(orders.router)
+app.include_router(stocks.router)
 
 @app.get("/health")
 def read_root():
-    return {"Hello": "World"}
-
+    return {"status": "healthy", "architecture": "layered"}
 
 @app.get("/health/database")
 async def check_database_health(db: AsyncSession = Depends(db_helper.get_db_session)):
