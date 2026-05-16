@@ -15,9 +15,7 @@ from src.api import auth
 from src.api import stocks
 
 app = FastAPI(
-    title="E-commerce API",
-    description="API для E-commerce проєкту",
-    version="1.0.0"
+    title="E-commerce API", description="API для E-commerce проєкту", version="1.0.0"
 )
 
 app.include_router(products.router)
@@ -27,17 +25,13 @@ app.include_router(stocks.router)
 app.include_router(cart.router)
 app.include_router(orders.router)
 
-@app.get("/")
+
+@app.get("/health")
 def read_root():
     return {"Hello": "World"}
 
 
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}
-
-
-@app.get("/health")
+@app.get("/health/database")
 async def check_database_health(db: AsyncSession = Depends(db_helper.get_db_session)):
     try:
         await db.execute(text("SELECT 1"))
