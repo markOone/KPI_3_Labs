@@ -1,32 +1,37 @@
 from typing import List
-from datetime import datetime
+import datetime
 from src.domain.entities.entities import Order, OrderItem
 from src.domain.value_objects.value_objects import Quantity, Money
-from src.domain.repositories.repositories import OrderRepository
-from src.domain.errors.domain_errors import DomainError, InvalidOrderStatusError, OrderNotFoundError
+from src.domain.repositories.repositories import CartRepository, OrderRepository
+from src.domain.errors.domain_errors import (
+    InvalidOrderStatusError,
+    OrderNotFoundError,
+)
 
 
 class CreateOrderUseCase:
     """Use case for creating an order from cart"""
 
-    def __init__(self, order_repository: OrderRepository):
+    def __init__(
+        self, order_repository: OrderRepository, cart_repository: CartRepository
+    ):
         self.order_repository = order_repository
+        self.cart_repository = cart_repository
 
     async def execute(
-        self,
-        user_id: int,
-        items: list,  # [(product_id, quantity, price_at_purchase), ...]
-        total_price: float
+        self, user_id: int, items: list, total_price: float, cart_id: int
     ) -> Order:
         """Create a new order"""
         order_items = []
-        for item_id, product_id, quantity, price in enumerate(items):
+
+        for index, item in enumerate(items):
+            product_id, quantity, price = item
             order_items.append(
                 OrderItem(
-                    id=item_id,
+                    id=index,
                     product_id=product_id,
                     quantity=Quantity(quantity),
-                    price_at_purchase=Money(price)
+                    price_at_purchase=Money(price),
                 )
             )
 
@@ -36,11 +41,14 @@ class CreateOrderUseCase:
             items=order_items,
             status="pending",
             total_price=Money(total_price),
-            created_at=datetime.utcnow()
+            created_at=datetime.datetime.now(datetime.timezone.utc),
         )
 
         order.validate()
-        return await self.order_repository.create(order)
+
+        created_order = await self.order_repository.create(order)
+        await self.cart_repository.delete(cart_id)
+        return created_order
 
 
 class GetOrderUseCase:
