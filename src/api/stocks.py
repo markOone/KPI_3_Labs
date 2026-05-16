@@ -12,6 +12,29 @@ from loguru import logger
 router = APIRouter(prefix="/stocks", tags=["Stocks"])
 
 
+@router.get("/{product_id}", status_code=status.HTTP_200_OK)
+async def get_product_stock(
+    product_id: int, db: AsyncSession = Depends(db_helper.get_db_session)
+):
+    stock_res = await db.execute(select(Stock).where(Stock.product_id == product_id))
+    stock = stock_res.scalar_one_or_none()
+    if stock is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Stock information not found."
+        )
+    return {"product_id": product_id, "quantity": int(stock.quantity)}
+
+
+@router.get("/", status_code=status.HTTP_200_OK)
+async def get_all_stocks(db: AsyncSession = Depends(db_helper.get_db_session)):
+    stock_res = await db.execute(select(Stock))
+    stocks = stock_res.scalars().all()
+    return [
+        {"product_id": stock.product_id, "quantity": int(stock.quantity)}
+        for stock in stocks
+    ]
+
+
 @router.put("/{product_id}", status_code=status.HTTP_200_OK)
 async def update_product_stock(
     product_id: int,
