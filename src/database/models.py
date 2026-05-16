@@ -3,8 +3,10 @@ from typing import List, Optional
 from sqlalchemy import Integer, String, ForeignKey, Numeric, DateTime, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+
 class Base(DeclarativeBase):
     pass
+
 
 class User(Base):
     __tablename__ = "users"
@@ -20,6 +22,7 @@ class User(Base):
     cart: Mapped[Optional["Cart"]] = relationship(back_populates="user", uselist=False)
     orders: Mapped[List["Order"]] = relationship(back_populates="user")
 
+
 class UserGroup(Base):
     __tablename__ = "user_groups"
 
@@ -28,6 +31,7 @@ class UserGroup(Base):
 
     users: Mapped[List["User"]] = relationship(back_populates="group")
 
+
 class Category(Base):
     __tablename__ = "categories"
 
@@ -35,6 +39,7 @@ class Category(Base):
     name: Mapped[str] = mapped_column(String(100))
 
     products: Mapped[List["Product"]] = relationship(back_populates="category")
+
 
 class Product(Base):
     __tablename__ = "products"
@@ -46,9 +51,12 @@ class Product(Base):
     sku: Mapped[str] = mapped_column(String(50), unique=True, index=True)
 
     category: Mapped["Category"] = relationship(back_populates="products")
-    stock: Mapped[Optional["Stock"]] = relationship(back_populates="product", uselist=False)
+    stock: Mapped[Optional["Stock"]] = relationship(
+        back_populates="product", uselist=False
+    )
     cart_items: Mapped[List["CartItem"]] = relationship(back_populates="product")
     order_items: Mapped[List["OrderItem"]] = relationship(back_populates="product")
+
 
 class Stock(Base):
     __tablename__ = "stocks"
@@ -59,6 +67,7 @@ class Stock(Base):
 
     product: Mapped["Product"] = relationship(back_populates="stock")
 
+
 class Cart(Base):
     __tablename__ = "carts"
 
@@ -66,7 +75,10 @@ class Cart(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True)
 
     user: Mapped["User"] = relationship(back_populates="cart")
-    items: Mapped[List["CartItem"]] = relationship(back_populates="cart", cascade="all, delete-orphan")
+    items: Mapped[List["CartItem"]] = relationship(
+        back_populates="cart", cascade="all, delete-orphan"
+    )
+
 
 class CartItem(Base):
     __tablename__ = "cart_items"
@@ -74,22 +86,28 @@ class CartItem(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     cart_id: Mapped[int] = mapped_column(ForeignKey("carts.id"))
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
-    quantity: Mapped[float] = mapped_column(Numeric(10, 3))
+    quantity: Mapped[float] = mapped_column(Integer, default=1)
 
     cart: Mapped["Cart"] = relationship(back_populates="items")
     product: Mapped["Product"] = relationship(back_populates="cart_items")
+
 
 class Order(Base):
     __tablename__ = "orders"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     status: Mapped[str] = mapped_column(String(50), default="pending")
     total_price: Mapped[float] = mapped_column(Numeric(10, 2))
 
     user: Mapped["User"] = relationship(back_populates="orders")
-    items: Mapped[List["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan",lazy='selectin')
+    items: Mapped[List["OrderItem"]] = relationship(
+        back_populates="order", cascade="all, delete-orphan", lazy="selectin"
+    )
+
 
 class OrderItem(Base):
     __tablename__ = "order_items"
