@@ -52,6 +52,6 @@ class UserRepositoryImpl(UserRepository):
             orm_user.username = user.username
             orm_user.password_hash = user.password_hash
             orm_user.group_id = user.group_id
-            await self.session.flush()
+            await self.session.commit()
 
         return user
