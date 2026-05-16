@@ -1,6 +1,7 @@
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select, text
+from sqlalchemy.orm import selectinload
 from src.exceptions.token import InvalidTokenError
 from src.config.settings import settings, AppSettings
 from src.database.models import User
@@ -26,7 +27,9 @@ async def get_jwt_manager(settings: AppSettings = Depends(get_settings)) -> JWTM
 
 
 async def get_user_by_name(username, db):
-    result = await db.execute(select(User).where(User.username == username))
+    result = await db.execute(
+        select(User).where(User.username == username).options(selectinload(User.group))
+    )
     return result.scalar_one_or_none()
 
 
@@ -37,7 +40,7 @@ async def get_current_user(
 ) -> User:
     try:
         payload = jwt_manager.decode_access_token(token)
-        print(payload)
+        # print(payload)
         username: str = payload.get("username")
         if username is None:
             raise InvalidTokenError("Token payload missing 'sub' field")
@@ -46,5 +49,14 @@ async def get_current_user(
     user = await get_user_by_name(username, db)
     if user is None:
         raise InvalidTokenError(f"User not found")
-    print(user)
+    # print(user)
     return user
+
+
+async def require_admin(current_user: User = Depends(get_current_user)):
+    # print(current_user.group.name)
+    if current_user.group.name != "Admin":
+        raise HTTPException(
+            status_code=403, detail="The user doesn't have enough privileges"
+        )
+    return current_user
