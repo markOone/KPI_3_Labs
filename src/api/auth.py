@@ -4,11 +4,12 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
 from src.auth.hashing import Hasher
-from src.config.dependencies import get_jwt_manager
+from src.config.dependencies import get_current_user, get_jwt_manager
 from src.schemas.auth import (
     TokenResponse,
     UserLoginSchema,
     UserRegisterSchema,
+    UserResponseSchema,
 )
 from src.database.engine import db_helper
 from src.database.models import User
@@ -62,3 +63,10 @@ async def login(
         "refresh_token": jwt_manager.create_refresh_token(data=payload),
         "token_type": "bearer",
     }
+
+
+@router.get("/me", response_model=UserResponseSchema)
+async def read_users_me(
+    current_user: User = Depends(get_current_user),
+):
+    return current_user
