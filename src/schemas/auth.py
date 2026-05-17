@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-
+from typing import Optional
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -13,5 +13,4 @@ class UserResponseSchema(BaseModel):
     id: int
     username: str
     email: str
-    group_id: int
-    
+    group_id: Optional[int] = None

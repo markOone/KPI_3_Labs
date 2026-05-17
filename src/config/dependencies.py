@@ -2,6 +2,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+from src.schemas.auth import UserResponseSchema
 from src.application.queries.user_handlers import GetUserQueryHandler
 from src.application.queries.user_queries import GetUserQuery
 from src.domain.repositories.repositories import UserRepository
@@ -79,10 +80,10 @@ async def get_current_user(
 
 
 async def require_admin(
-    user_id: int = Depends(get_current_user),
+    current_user: UserResponseSchema = Depends(get_current_user),
     user_repo: UserRepository = Depends(get_user_repository),
 ):
-    query = GetUserQuery(user_id=user_id)
+    query = GetUserQuery(user_id=current_user.id)
     handler = GetUserQueryHandler(user_repo)
 
     try:
@@ -92,7 +93,7 @@ async def require_admin(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
 
-    if user_dto.group_name != "Admin":
+    if user_dto.group_id != 1:  # Assuming 1 is the group_id for Admin
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="The user doesn't have enough privileges",
