@@ -2,6 +2,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+from infrastructure.database.models import UserModel
 from src.schemas.auth import UserResponseSchema
 from src.application.queries.user_handlers import GetUserQueryHandler
 from src.application.queries.user_queries import GetUserQuery
@@ -9,7 +10,6 @@ from src.domain.repositories.repositories import UserRepository
 from src.infrastructure.repositories.product_repository import ProductRepositoryImpl
 from src.infrastructure.repositories.user_repository import UserRepositoryImpl
 from src.config.settings import settings, AppSettings
-from src.database.models import User
 from src.database.engine import db_helper
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth.services import JWTManager
@@ -41,7 +41,7 @@ async def get_jwt_manager(settings: AppSettings = Depends(get_settings)) -> JWTM
 
 async def get_user_by_name(username, db):
     result = await db.execute(
-        select(User).where(User.username == username).options(selectinload(User.group))
+        select(UserModel).where(UserModel.username == username).options(selectinload(UserModel.group))
     )
     return result.scalar_one_or_none()
 
@@ -68,7 +68,7 @@ async def get_current_user_id(
 async def get_current_user(
     user_id: int = Depends(get_current_user_id),
     user_repo: UserRepository = Depends(get_user_repository),
-) -> User:
+) -> UserResponseSchema:
     try:
         query = GetUserQuery(user_id=user_id)
         handler = GetUserQueryHandler(user_repo)
@@ -93,7 +93,7 @@ async def require_admin(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
 
-    if user_dto.group_id != 1:  # Assuming 1 is the group_id for Admin
+    if user_dto.group_id != 1:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="The user doesn't have enough privileges",
