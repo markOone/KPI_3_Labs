@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from infrastructure.database.models import UserModel
+from src.infrastructure.database.models import UserModel
 from src.schemas.auth import UserResponseSchema
 from src.application.queries.user_handlers import GetUserQueryHandler
 from src.application.queries.user_queries import GetUserQuery
