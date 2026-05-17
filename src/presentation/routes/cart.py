@@ -60,9 +60,7 @@ async def add_item_to_cart(
 
     try:
         await handler.handle(command)
-        return HTTPException(
-            status_code=status.HTTP_204_NO_CONTENT, detail="Item added to cart"
-        )
+        return {"message": "Item added to cart"}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

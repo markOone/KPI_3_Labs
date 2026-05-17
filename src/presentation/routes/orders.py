@@ -39,7 +39,9 @@ async def process_checkout(
     cart_repo: CartRepositoryImpl = Depends(get_cart_repository),
     product_repo: ProductRepositoryImpl = Depends(get_product_repository),
 ):
-    handler = ProcessCheckoutCommandHandler(cart_repo, product_repo, order_repo)
+    from src.infrastructure.repositories.stock_repository import StockRepositoryImpl
+    stock_repo = StockRepositoryImpl(db)
+    handler = ProcessCheckoutCommandHandler(cart_repo, product_repo, order_repo, stock_repo)
     try:
         command = ProcessCheckoutCommand(user_id=user.id)
         order_id = await handler.handle(command)

@@ -17,7 +17,8 @@ class AddToCartCommandHandler:
     async def handle(self, command: AddToCartCommand) -> Cart:
         cart = await self.repo.get_by_user_id(command.user_id)
         if not cart:
-            raise DomainError(f"Cart not found for user {command.user_id}")
+            cart = Cart(id=0, user_id=command.user_id, items=[])
+            await self.repo.create(cart)
 
         cart.add_item(
             product_id=command.product_id,

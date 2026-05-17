@@ -25,6 +25,8 @@ class OrderRepositoryImpl(OrderRepository):
         return [OrderMapper.from_orm(o) for o in orm_orders]
 
     async def create(self, order: Order) -> Order:
+        from src.infrastructure.database.models import OrderItemModel
+
         orm_order = OrderModel(
             user_id=order.user_id,
             status=order.status,
@@ -34,6 +36,19 @@ class OrderRepositoryImpl(OrderRepository):
         self.session.add(orm_order)
         await self.session.flush()
         order.id = orm_order.id
+
+        orm_items = [
+            OrderItemModel(
+                order_id=orm_order.id,
+                product_id=item.product_id,
+                quantity=item.quantity.value,
+                price_at_purchase=item.price_at_purchase.amount
+            )
+            for item in order.items
+        ]
+        self.session.add_all(orm_items)
+        await self.session.commit()
+
         return order
 
     async def update(self, order: Order) -> Order:

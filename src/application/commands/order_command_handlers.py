@@ -7,10 +7,11 @@ from src.domain.errors.domain_errors import InvalidOrderStatusError, OrderNotFou
 from fastapi import HTTPException
 
 class ProcessCheckoutCommandHandler:
-    def __init__(self, cart_repository: CartRepository, product_repository: ProductRepository, order_repository: OrderRepository):
+    def __init__(self, cart_repository: CartRepository, product_repository: ProductRepository, order_repository: OrderRepository, stock_repository=None):
         self.cart_repository = cart_repository
         self.product_repository = product_repository
         self.order_repository = order_repository
+        self.stock_repository = stock_repository
 
     async def handle(self, command: ProcessCheckoutCommand) -> int:
         cart = await self.cart_repository.get_by_user_id(command.user_id)
@@ -49,6 +50,15 @@ class ProcessCheckoutCommandHandler:
         order.validate()
 
         created_order = await self.order_repository.create(order)
+
+        if self.stock_repository:
+            for item in items_data:
+                product_id, quantity, _ = item
+                stock = await self.stock_repository.get_by_product_id(product_id)
+                if stock:
+                    stock.reduce(Quantity(quantity))
+                    await self.stock_repository.update(stock)
+
         await self.cart_repository.delete(cart.id)
         return created_order.id
 
