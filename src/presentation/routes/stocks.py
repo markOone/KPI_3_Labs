@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from src.database.engine import db_helper
-from src.database.models import Stock, Product, User
+from src.infrastructure.database.models import StockModel, ProductModel, UserModel
 from src.schemas.stocks import StockUpdate
 from src.config.dependencies import require_admin
 
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/stocks", tags=["Stocks"])
 
 @router.get("/{product_id}", status_code=status.HTTP_200_OK)
 async def get_product_stock(product_id: int, db: AsyncSession = Depends(db_helper.get_db_session)):
-    res = await db.execute(select(Stock).where(Stock.product_id == product_id))
+    res = await db.execute(select(StockModel).where(StockModel.product_id == product_id))
     stock = res.scalar_one_or_none()
     if not stock:
         raise HTTPException(status_code=404, detail="Stock information not found.")
@@ -21,19 +21,19 @@ async def update_product_stock(
     product_id: int,
     stock_in: StockUpdate,
     db: AsyncSession = Depends(db_helper.get_db_session),
-    admin: User = Depends(require_admin)
+    admin: UserModel = Depends(require_admin)
 ):
-    product_res = await db.execute(select(Product).where(Product.id == product_id))
+    product_res = await db.execute(select(ProductModel).where(ProductModel.id == product_id))
     if not product_res.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Product not found.")
 
-    res = await db.execute(select(Stock).where(Stock.product_id == product_id))
+    res = await db.execute(select(StockModel).where(StockModel.product_id == product_id))
     stock = res.scalar_one_or_none()
 
     if stock:
         stock.quantity = stock_in.quantity
     else:
-        stock = Stock(product_id=product_id, quantity=stock_in.quantity)
+        stock = StockModel(product_id=product_id, quantity=stock_in.quantity)
         db.add(stock)
 
     await db.commit()
