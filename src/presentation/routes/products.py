@@ -34,8 +34,6 @@ async def create_product(
     product_repo: ProductRepositoryImpl = Depends(get_product_repository)
 ):
     """Create a new product"""
-    handler = CreateProductCommandHandler(product_repo)
-
     try:
         command = CreateProductCommand(
             name=product_in.name,
@@ -43,16 +41,11 @@ async def create_product(
             price=float(product_in.price),
             category_id=product_in.category_id
         )
-        product_id = await handler.handle(command)
-        product = await product_repo.get_by_id(product_id)
+        command_handler = CreateProductCommandHandler(product_repo)
+        product_id = await command_handler.handle(command)
 
-        return ProductResponse(
-            id=product.id,
-            name=product.name,
-            sku=product.sku.value,
-            price=float(product.price.amount),
-            category_id=product.category_id
-        )
+        query_handler = GetProductQueryHandler(product_repo)
+        return await query_handler.handle(GetProductQuery(product_id=product_id))
 
     except DuplicateSkuError as e:
         raise HTTPException(
@@ -108,7 +101,6 @@ async def update_product(
     product_repo: ProductRepositoryImpl = Depends(get_product_repository)
 ):
     """Update a product"""
-    handler = UpdateProductCommandHandler(product_repo)
     command = UpdateProductCommand(
         product_id=product_id,
         name=product_update.name,
@@ -118,16 +110,11 @@ async def update_product(
     )
 
     try:
-        await handler.handle(command)
-        product = await product_repo.get_by_id(product_id)
+        command_handler = UpdateProductCommandHandler(product_repo)
+        await command_handler.handle(command)
 
-        return ProductResponse(
-            id=product.id,
-            name=product.name,
-            sku=product.sku.value,
-            price=float(product.price.amount),
-            category_id=product.category_id
-        )
+        query_handler = GetProductQueryHandler(product_repo)
+        return await query_handler.handle(GetProductQuery(product_id=product_id))
 
     except ProductNotFoundError as e:
         raise HTTPException(
