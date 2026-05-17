@@ -4,11 +4,15 @@ from src.schemas.auth import UserResponseSchema
 from src.database.engine import db_helper
 from src.infrastructure.repositories.order_repository import OrderRepositoryImpl
 from src.infrastructure.repositories.cart_repository import CartRepositoryImpl
-from src.infrastructure.repositories.stock_repository import StockRepositoryImpl
-from src.application.use_cases.order_use_cases import CreateOrderUseCase
+from src.infrastructure.repositories.product_repository import ProductRepositoryImpl
+from src.application.commands.order_commands import ProcessCheckoutCommand
+from src.application.commands.order_command_handlers import ProcessCheckoutCommandHandler
+from src.application.queries.order_queries import GetOrderQuery, GetUserOrdersQuery
+from src.application.queries.order_queries_handlers import GetOrderQueryHandler, GetUserOrdersQueryHandler
 from src.domain.errors.domain_errors import DomainError
 from src.schemas.orders import OrderResponse
 from src.config.dependencies import get_current_user
+from src.infrastructure.database.models import UserModel
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -21,33 +25,26 @@ async def get_cart_repository(db: AsyncSession = Depends(db_helper.get_db_sessio
     return CartRepositoryImpl(db)
 
 
+async def get_product_repository(db: AsyncSession = Depends(db_helper.get_db_session)):
+    return ProductRepositoryImpl(db)
+
+
 @router.post(
     "/checkout", response_model=OrderResponse, status_code=status.HTTP_201_CREATED
 )
 async def process_checkout(
     db: AsyncSession = Depends(db_helper.get_db_session),
-    user: UserResponseSchema = Depends(get_current_user),
+    user: UserModel = Depends(get_current_user),
     order_repo: OrderRepositoryImpl = Depends(get_order_repository),
     cart_repo: CartRepositoryImpl = Depends(get_cart_repository),
+    product_repo: ProductRepositoryImpl = Depends(get_product_repository),
 ):
-    cart = await cart_repo.get_by_user_id(user.id)
-    if not cart or not cart.items:
-        raise HTTPException(status_code=400, detail="Cart is empty")
-
-    use_case = CreateOrderUseCase(order_repo, cart_repo)
+    handler = ProcessCheckoutCommandHandler(cart_repo, product_repo, order_repo)
     try:
-        items_data = [
-            (item.product_id, item.quantity.value, item.price.amount)
-            for item in cart.items
-        ]
+        command = ProcessCheckoutCommand(user_id=user.id)
+        order_id = await handler.handle(command)
 
-        order = await use_case.execute(
-            user_id=user.id,
-            items=items_data,
-            total_price=cart.total_price().amount,
-            cart_id=cart.id,
-        )
-
+        order = await order_repo.get_by_id(order_id)
         return OrderResponse(
             id=order.id,
             user_id=order.user_id,
@@ -65,5 +62,32 @@ async def process_checkout(
             ],
         )
 
+    except DomainError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/{order_id}", response_model=OrderResponse)
+async def get_order(
+    order_id: int,
+    order_repo: OrderRepositoryImpl = Depends(get_order_repository),
+    user: UserModel = Depends(get_current_user),
+):
+    handler = GetOrderQueryHandler(order_repo)
+    try:
+        query = GetOrderQuery(order_id=order_id)
+        return await handler.handle(query)
+    except DomainError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/user/orders", response_model=list[OrderResponse])
+async def get_user_orders(
+    order_repo: OrderRepositoryImpl = Depends(get_order_repository),
+    user: UserModel = Depends(get_current_user),
+):
+    handler = GetUserOrdersQueryHandler(order_repo)
+    try:
+        query = GetUserOrdersQuery(user_id=user.id)
+        return await handler.handle(query)
     except DomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
