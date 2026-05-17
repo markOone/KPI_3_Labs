@@ -13,6 +13,8 @@ from src.application.commands.cart_handlers import (
 )
 from src.application.queries.cart_queries import GetCartQuery
 from src.application.queries.cart_handlers import GetCartQueryHandler
+from src.schemas.cart import CartItemAdd, CartItemResponse
+from src.infrastructure.database.models import UserModel
 from src.schemas.cart import CartItemAdd
 from src.schemas.auth import UserResponseSchema
 from src.config.dependencies import get_current_user
@@ -28,7 +30,7 @@ async def get_cart_repository(db: AsyncSession = Depends(db_helper.get_db_sessio
 @router.get("", status_code=status.HTTP_200_OK)
 async def get_cart(
     cart_repo: CartRepositoryImpl = Depends(get_cart_repository),
-    user: UserResponseSchema = Depends(get_current_user),
+    user: UserModel = Depends(get_current_user),
 ):
     query = GetCartQuery(user_id=user.id)
     handler = GetCartQueryHandler(cart_repo)
