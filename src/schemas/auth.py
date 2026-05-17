@@ -1,15 +1,4 @@
-from pydantic import BaseModel, EmailStr
-
-
-class UserRegisterSchema(BaseModel):
-    username: str
-    email: EmailStr
-    password: str
-
-
-class UserLoginSchema(BaseModel):
-    username: str
-    password: str
+from pydantic import BaseModel
 
 
 class TokenResponse(BaseModel):
@@ -19,8 +8,9 @@ class TokenResponse(BaseModel):
 
 
 class UserResponseSchema(BaseModel):
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "frozen": True}
 
     id: int
     username: str
-    email: EmailStr
+    email: str
+    group_id: int
