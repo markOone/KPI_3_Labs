@@ -8,6 +8,10 @@ class InvalidEmailError(DomainError):
     pass
 
 
+class CredentialsError(DomainError):
+    """Invalid credentials"""
+    pass
+
 class EmailAlreadyExistsError(DomainError):
     """User with this email already exists"""
     pass
