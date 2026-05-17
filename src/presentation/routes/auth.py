@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from src.domain.repositories.repositories import CartRepository, UserRepository
+from src.presentation.routes.orders import get_cart_repository
 from src.application.commands.user_commands import AddUserCommand, LoginUserCommand
 from src.application.commands.user_handlers import (
     AddUserCommandHandler,
@@ -24,9 +26,10 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
     command: AddUserCommand,
-    user_repo: UserRepositoryImpl = Depends(get_user_repository),
+    user_repo: UserRepository = Depends(get_user_repository),
+    cart_repo: CartRepository = Depends(get_cart_repository),
 ):
-    handler = AddUserCommandHandler(user_repo)
+    handler = AddUserCommandHandler(user_repo, cart_repo)
     try:
         user_id = await handler.handle(command)
         return {"id": user_id}
