@@ -73,13 +73,10 @@ class UserMapper:
 class CartItemMapper:
     @staticmethod
     def from_orm(orm_item: CartItemModel) -> CartItem:
-        # Note: we don't have price in CartItemModel, use 0 as placeholder
-        # This should be enhanced to store price_at_cart_time
         return CartItem(
             id=orm_item.id,
             product_id=orm_item.product_id,
             quantity=Quantity(float(orm_item.quantity)),
-            price=Money(0)  # Need to fetch from product
         )
 
     @staticmethod

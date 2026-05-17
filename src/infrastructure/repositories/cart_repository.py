@@ -34,7 +34,7 @@ class CartRepositoryImpl(CartRepository):
     async def update(self, cart: Cart) -> Cart:
         query = (
             select(CartModel)
-            .options(selectinload(CartModel.items))
+            .options(selectinload(CartModel.items).selectinload(CartItemModel.product))
             .where(CartModel.id == cart.id)
         )
         result = await self.session.execute(query)
@@ -63,18 +63,12 @@ class CartRepositoryImpl(CartRepository):
             await self.session.commit()
             await self.session.refresh(orm_cart)
 
+            from src.infrastructure.mappers.mappers import CartItemMapper
+
             updated_items = []
             for orm_item in orm_cart.items:
-                updated_items.append(
-                    DomainCartItem(
-                        id=orm_item.id,
-                        product_id=orm_item.product_id,
-                        quantity=orm_item.quantity,
-                    )
-                )
+                updated_items.append(CartItemMapper.from_orm(orm_item))
             cart.items = updated_items
-
-        return cart
 
     async def delete(self, cart_id: int) -> bool:
         query = select(CartModel).where(CartModel.id == cart_id)
