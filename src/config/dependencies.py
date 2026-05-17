@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 from src.application.queries.user_handlers import GetUserQueryHandler
 from src.application.queries.user_queries import GetUserQuery
 from src.domain.repositories.repositories import UserRepository
+from src.infrastructure.repositories.product_repository import ProductRepositoryImpl
 from src.infrastructure.repositories.user_repository import UserRepositoryImpl
 from src.config.settings import settings, AppSettings
 from src.database.models import User
@@ -18,6 +19,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 async def get_user_repository(db: AsyncSession = Depends(db_helper.get_db_session)):
     return UserRepositoryImpl(db)
+
+
+async def get_product_repository(db: AsyncSession = Depends(db_helper.get_db_session)):
+    return ProductRepositoryImpl(db)
 
 
 async def get_settings() -> AppSettings:
@@ -49,7 +54,8 @@ async def get_current_user_id(
         detail="Could not validate credentials",
     )
     try:
-        payload = jwt_manager.decode_token(token)
+        payload = jwt_manager.decode_access_token(token)
+        # print(f"Decoded JWT payload: {payload}")
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
@@ -66,9 +72,9 @@ async def get_current_user(
         query = GetUserQuery(user_id=user_id)
         handler = GetUserQueryHandler(user_repo)
         return await handler.handle(query)
-    except Exception:
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=f"User not found {e}"
         )
 
 
