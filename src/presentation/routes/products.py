@@ -3,8 +3,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
 from src.database.engine import db_helper
-from src.application.use_cases.product_use_cases import (
-    GetProductUseCase, GetAllProductsUseCase, UpdateProductUseCase, DeleteProductUseCase, CreateProductUseCase
+from src.application.commands.product_commands import (
+    CreateProductCommand, UpdateProductCommand, DeleteProductCommand
+)
+from src.application.commands.product_command_handlers import (
+    CreateProductCommandHandler, UpdateProductCommandHandler, DeleteProductCommandHandler
+)
+from src.application.queries.product_queries import GetProductQuery, GetAllProductsQuery
+from src.application.queries.product_queries_handlers import (
+    GetProductQueryHandler, GetAllProductsQueryHandler
 )
 from src.infrastructure.repositories.product_repository import ProductRepositoryImpl
 from src.domain.errors.domain_errors import (
@@ -27,22 +34,24 @@ async def create_product(
     product_repo: ProductRepositoryImpl = Depends(get_product_repository)
 ):
     """Create a new product"""
-    use_case = CreateProductUseCase(product_repo)
+    handler = CreateProductCommandHandler(product_repo)
 
     try:
-        created_product = await use_case.execute(
+        command = CreateProductCommand(
             name=product_in.name,
             sku=product_in.sku,
             price=float(product_in.price),
             category_id=product_in.category_id
         )
+        product_id = await handler.handle(command)
+        product = await product_repo.get_by_id(product_id)
 
         return ProductResponse(
-            id=created_product.id,
-            name=created_product.name,
-            sku=created_product.sku.value,
-            price=float(created_product.price.amount),
-            category_id=created_product.category_id
+            id=product.id,
+            name=product.name,
+            sku=product.sku.value,
+            price=float(product.price.amount),
+            category_id=product.category_id
         )
 
     except DuplicateSkuError as e:
@@ -69,19 +78,9 @@ async def get_products(
     product_repo: ProductRepositoryImpl = Depends(get_product_repository)
 ):
     """Get all products"""
-    use_case = GetAllProductsUseCase(product_repo)
-    products = await use_case.execute(skip=skip, limit=limit)
-
-    return [
-        ProductResponse(
-            id=p.id,
-            name=p.name,
-            sku=p.sku.value,
-            price=float(p.price.amount),
-            category_id=p.category_id
-        )
-        for p in products
-    ]
+    handler = GetAllProductsQueryHandler(product_repo)
+    query = GetAllProductsQuery(skip=skip, limit=limit)
+    return await handler.handle(query)
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
@@ -90,17 +89,11 @@ async def get_product(
     product_repo: ProductRepositoryImpl = Depends(get_product_repository)
 ):
     """Get a specific product"""
-    use_case = GetProductUseCase(product_repo)
+    handler = GetProductQueryHandler(product_repo)
+    query = GetProductQuery(product_id=product_id)
 
     try:
-        product = await use_case.execute(product_id)
-        return ProductResponse(
-            id=product.id,
-            name=product.name,
-            sku=product.sku.value,
-            price=float(product.price.amount),
-            category_id=product.category_id
-        )
+        return await handler.handle(query)
     except ProductNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -115,23 +108,25 @@ async def update_product(
     product_repo: ProductRepositoryImpl = Depends(get_product_repository)
 ):
     """Update a product"""
-    use_case = UpdateProductUseCase(product_repo)
+    handler = UpdateProductCommandHandler(product_repo)
+    command = UpdateProductCommand(
+        product_id=product_id,
+        name=product_update.name,
+        sku=product_update.sku,
+        price=float(product_update.price) if product_update.price else None,
+        category_id=product_update.category_id
+    )
 
     try:
-        updated = await use_case.execute(
-            product_id=product_id,
-            name=product_update.name,
-            sku=product_update.sku,
-            price=float(product_update.price) if product_update.price else None,
-            category_id=product_update.category_id
-        )
+        await handler.handle(command)
+        product = await product_repo.get_by_id(product_id)
 
         return ProductResponse(
-            id=updated.id,
-            name=updated.name,
-            sku=updated.sku.value,
-            price=float(updated.price.amount),
-            category_id=updated.category_id
+            id=product.id,
+            name=product.name,
+            sku=product.sku.value,
+            price=float(product.price.amount),
+            category_id=product.category_id
         )
 
     except ProductNotFoundError as e:
@@ -157,10 +152,11 @@ async def delete_product(
     product_repo: ProductRepositoryImpl = Depends(get_product_repository)
 ):
     """Delete a product"""
-    use_case = DeleteProductUseCase(product_repo)
+    handler = DeleteProductCommandHandler(product_repo)
+    command = DeleteProductCommand(product_id=product_id)
 
     try:
-        await use_case.execute(product_id)
+        await handler.handle(command)
     except ProductNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
