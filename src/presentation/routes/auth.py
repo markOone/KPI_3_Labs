@@ -1,17 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.ext.asyncio import AsyncSession
 from src.application.commands.user_commands import AddUserCommand, LoginUserCommand
 from src.application.commands.user_handlers import (
     AddUserCommandHandler,
     LoginUserCommandHandler,
 )
-from src.application.queries.user_handlers import GetUserQueryHandler
-from src.application.queries.user_queries import GetUserQuery
-from src.domain.repositories.repositories import UserRepository
-from src.database.engine import db_helper
 from src.infrastructure.repositories.user_repository import UserRepositoryImpl
-from src.application.use_cases.auth_use_cases import RegisterUserUseCase
 from src.domain.errors.domain_errors import (
     CredentialsError,
     EmailAlreadyExistsError,

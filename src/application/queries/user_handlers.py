@@ -17,4 +17,5 @@ class GetUserQueryHandler:
             id=user.id,
             username=user.username,
             email=user.email.value,
+            group_id=user.group_id,
         )

@@ -14,3 +14,4 @@ class UserResponseSchema(BaseModel):
     username: str
     email: str
     group_id: int
+    
