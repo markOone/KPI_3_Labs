@@ -1,14 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.schemas.auth import UserResponseSchema
 from src.database.engine import db_helper
 from src.infrastructure.repositories.cart_repository import CartRepositoryImpl
 from src.infrastructure.repositories.product_repository import ProductRepositoryImpl
 from src.infrastructure.repositories.stock_repository import StockRepositoryImpl
-from src.application.use_cases.cart_use_cases import (
-    GetCartUseCase,
-    AddToCartUseCase,
-    ClearCartUseCase,
+from src.application.commands.cart_commands import (
+    AddToCartCommand,
+    ClearCartCommand,
 )
+from src.application.commands.cart_handlers import (
+    AddToCartCommandHandler,
+    ClearCartCommandHandler,
+)
+from src.application.queries.cart_queries import GetCartQuery
+from src.application.queries.cart_handlers import GetCartQueryHandler
 from src.schemas.cart import CartItemAdd, CartItemResponse
 from src.database.models import User
 from src.config.dependencies import get_current_user
@@ -30,9 +36,10 @@ async def get_cart(
     cart_repo: CartRepositoryImpl = Depends(get_cart_repository),
     user: User = Depends(get_current_user),
 ):
-    use_case = GetCartUseCase(cart_repo)
+    query = GetCartQuery(user_id=user.id)
+    handler = GetCartQueryHandler(cart_repo)
     try:
-        cart = await use_case.execute(user.id)
+        cart = await handler.handle(query)
         return {
             "items": [
                 {"product_id": item.product_id, "quantity": int(item.quantity.value)}
@@ -43,49 +50,25 @@ async def get_cart(
         return {"items": []}
 
 
-@router.post(
-    "/items", response_model=CartItemResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("/items", status_code=status.HTTP_201_CREATED)
 async def add_item_to_cart(
     item_in: CartItemAdd,
     cart_repo: CartRepositoryImpl = Depends(get_cart_repository),
-    product_repo: ProductRepositoryImpl = Depends(get_product_repository),
-    user: User = Depends(get_current_user),
+    user: UserResponseSchema = Depends(get_current_user),
 ):
-    product = await product_repo.get_by_id(item_in.product_id)
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found.")
+    command = AddToCartCommand(
+        user_id=user.id, product_id=item_in.product_id, quantity=float(item_in.quantity)
+    )
 
-    stock_repo = StockRepositoryImpl(cart_repo.session)
-    stock = await stock_repo.get_by_product_id(item_in.product_id)
-    stock_qty = stock.quantity.value if stock else 0
-    if stock_qty < item_in.quantity:
-        raise HTTPException(
-            status_code=400, detail=f"Not enough stock. Available: {int(stock_qty)}"
+    handler = AddToCartCommandHandler(cart_repo)
+
+    try:
+        await handler.handle(command)
+        return HTTPException(
+            status_code=status.HTTP_204_NO_CONTENT, detail="Item added to cart"
         )
-
-    cart = await cart_repo.get_by_user_id(user.id)
-    if not cart:
-        cart = await cart_repo.create(DomainCart(id=0, user_id=user.id, items=[]))
-
-    use_case = AddToCartUseCase(cart_repo)
-    updated_cart = await use_case.execute(
-        user_id=user.id,
-        product_id=item_in.product_id,
-        quantity=float(item_in.quantity),
-        price=float(product.price.amount),
-    )
-
-    added_item = next(
-        (i for i in updated_cart.items if i.product_id == item_in.product_id), None
-    )
-
-    if not added_item:
-        raise HTTPException(status_code=500, detail="Failed to retrieve added item")
-
-    return CartItemResponse(
-        id=added_item.id, product_id=added_item.product_id, quantity=added_item.quantity
-    )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.delete("/clear", status_code=status.HTTP_200_OK)
@@ -93,9 +76,10 @@ async def clear_cart(
     cart_repo: CartRepositoryImpl = Depends(get_cart_repository),
     user: User = Depends(get_current_user),
 ):
-    use_case = ClearCartUseCase(cart_repo)
+    command = ClearCartCommand(user_id=user.id)
+    handler = ClearCartCommandHandler(cart_repo)
     try:
-        await use_case.execute(user.id)
+        await handler.handle(command)
         return {"message": "Cart cleared successfully"}
     except Exception:
         return {"message": "Cart is already empty"}
