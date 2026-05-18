@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload, joinedload
 
-from src.domain.value_objects.value_objects import Money
+from src.domain.value_objects.value_objects import Money, Quantity
 from src.domain.entities.entities import Cart, CartItem as DomainCartItem
 from src.domain.repositories.repositories import CartRepository
 from src.infrastructure.database.models import CartItemModel, CartModel
@@ -27,7 +27,7 @@ class CartRepositoryImpl(CartRepository):
             return None
 
         items = [
-            CartItem(
+            DomainCartItem(
                 id=i.id,
                 product_id=i.product_id,
                 quantity=Quantity(i.quantity),
@@ -49,7 +49,7 @@ class CartRepositoryImpl(CartRepository):
     async def update(self, cart: Cart) -> Cart:
         query = (
             select(CartModel)
-            .options(selectinload(CartModel.items))
+            .options(selectinload(CartModel.items).selectinload(CartItemModel.product))
             .where(CartModel.id == cart.id)
         )
         result = await self.session.execute(query)
@@ -58,31 +58,33 @@ class CartRepositoryImpl(CartRepository):
         if orm_cart:
             orm_cart.items.clear()
 
-            for item in cart.items:
-                qty_val = item.quantity.value if hasattr(item.quantity, "value") else item.quantity
-                orm_cart.items.append(
-                    CartItemModel(
-                        product_id=item.product_id,
-                        quantity=qty_val
-                    )
+            new_orm_items = [
+                CartItemModel(
+                    product_id=item.product_id,
+                    quantity=(
+                        item.quantity.value
+                        if hasattr(item.quantity, "value")
+                        else item.quantity
+                    ),
+                    price=item.price.amount,
+                    cart_id=orm_cart.id,
                 )
+                for item in cart.items
+            ]
+
+            orm_cart.items = new_orm_items
 
             await self.session.commit()
-            await self.session.refresh(orm_cart)
-
-            from src.domain.value_objects.value_objects import Quantity, Money
+            await self.session.refresh(orm_cart, ["items"])
 
             updated_items = []
             for orm_item in orm_cart.items:
-                original_item = next((i for i in cart.items if i.product_id == orm_item.product_id), None)
-                item_price = original_item.price if original_item else Money(0)
-
                 updated_items.append(
-                    DomainCartItem( 
+                    DomainCartItem(
                         id=orm_item.id,
                         product_id=orm_item.product_id,
-                        quantity=orm_item.quantity,
-                        price=orm_item.product.price if orm_item.product else Money(0),
+                        quantity=Quantity(orm_item.quantity),
+                        price=Money(orm_item.price),
                     )
                 )
             cart.items = updated_items

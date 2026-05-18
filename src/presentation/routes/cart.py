@@ -25,6 +25,10 @@ async def get_product_repository(db: AsyncSession = Depends(db_helper.get_db_ses
     return ProductRepositoryImpl(db)
 
 
+async def get_stock_repository(db: AsyncSession = Depends(db_helper.get_db_session)):
+    return StockRepositoryImpl(db)
+
+
 @router.get("", status_code=status.HTTP_200_OK)
 async def get_cart(
     cart_repo: CartRepositoryImpl = Depends(get_cart_repository),
@@ -50,13 +54,13 @@ async def add_item_to_cart(
     item_in: CartItemAdd,
     cart_repo: CartRepositoryImpl = Depends(get_cart_repository),
     product_repo: ProductRepositoryImpl = Depends(get_product_repository),
+    stock_repo: StockRepositoryImpl = Depends(get_stock_repository),
     user: User = Depends(get_current_user),
 ):
     product = await product_repo.get_by_id(item_in.product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found.")
 
-    stock_repo = StockRepositoryImpl(cart_repo.session)
     stock = await stock_repo.get_by_product_id(item_in.product_id)
     stock_qty = stock.quantity.value if stock else 0
     if stock_qty < item_in.quantity:
