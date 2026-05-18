@@ -14,8 +14,12 @@ from src.database.engine import db_helper
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth.services import JWTManager
 from jose import JWTError
+from src.infrastructure.event_bus import InProcessEventBus, EventBus
+from src.application.services.notifications import EmailNotificationService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+_event_bus: EventBus = InProcessEventBus()
 
 
 async def get_user_repository(db: AsyncSession = Depends(db_helper.get_db_session)):
@@ -99,3 +103,12 @@ async def require_admin(
             detail="The user doesn't have enough privileges",
         )
     return user_dto
+
+
+def get_event_bus() -> EventBus:
+    return _event_bus
+
+
+def get_notification_service() -> EmailNotificationService:
+    return EmailNotificationService()
+

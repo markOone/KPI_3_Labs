@@ -1,5 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.application.services.notifications import NotificationService
+from src.domain.repositories.repositories import UserRepository
+from src.infrastructure.event_bus import EventBus
 from src.schemas.auth import UserResponseSchema
 from src.database.engine import db_helper
 from src.infrastructure.repositories.order_repository import OrderRepositoryImpl
@@ -10,6 +13,7 @@ from src.application.commands.order_command_handlers import ProcessCheckoutComma
 from src.application.queries.order_queries import GetOrderQuery, GetUserOrdersQuery
 from src.application.queries.order_queries_handlers import GetOrderQueryHandler, GetUserOrdersQueryHandler
 from src.domain.errors.domain_errors import DomainError
+from src.config.dependencies import get_user_repository, get_notification_service, get_event_bus
 from src.schemas.orders import OrderResponse
 from src.config.dependencies import get_current_user
 from src.infrastructure.database.models import UserModel
@@ -38,10 +42,13 @@ async def process_checkout(
     order_repo: OrderRepositoryImpl = Depends(get_order_repository),
     cart_repo: CartRepositoryImpl = Depends(get_cart_repository),
     product_repo: ProductRepositoryImpl = Depends(get_product_repository),
+    notification_service: NotificationService = Depends(get_notification_service),
+    event_bus: EventBus = Depends(get_event_bus),
+    user_repository: UserRepository = Depends(get_user_repository),
 ):
     from src.infrastructure.repositories.stock_repository import StockRepositoryImpl
     stock_repo = StockRepositoryImpl(db)
-    handler = ProcessCheckoutCommandHandler(cart_repo, product_repo, order_repo, stock_repo)
+    handler = ProcessCheckoutCommandHandler(cart_repo, product_repo, order_repo, user_repository, notification_service, event_bus, stock_repo, use_async=True)
     try:
         command = ProcessCheckoutCommand(user_id=user.id)
         order_id = await handler.handle(command)
