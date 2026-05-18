@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from application.use_cases.cart_use_cases import CreateEmptyCartUseCase
-from domain.repositories.repositories import (
+from src.application.use_cases.cart_use_cases import CreateEmptyCartUseCase
+from src.domain.repositories.repositories import (
     CartRepository,
     UserRepository,
 )
@@ -36,7 +36,7 @@ async def register(
     use_case = RegisterUserUseCase(user_repo)
     cart_use_case = CreateEmptyCartUseCase(cart_repo)
     try:
-        user_id = use_case.execute(
+        user_id = await use_case.execute(
             username=data.username, email=data.email, password_plain=data.password
         )
 
@@ -59,7 +59,9 @@ async def login(
     use_case = LoginUseCase(user_repo)
 
     try:
-        user = await use_case.execute(username=data.username, password=data.password)
+        user = await use_case.execute(
+            username=data.username, password_plain=data.password
+        )
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"

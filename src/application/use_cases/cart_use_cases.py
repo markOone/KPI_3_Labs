@@ -1,3 +1,4 @@
+from src.domain.value_objects.value_objects import Quantity, Money
 from src.domain.entities.entities import Cart
 from src.domain.repositories.repositories import CartRepository
 from src.domain.errors.domain_errors import DomainError
@@ -23,9 +24,10 @@ class AddToCartUseCase:
     def __init__(self, cart_repository: CartRepository):
         self.cart_repository = cart_repository
 
-    async def execute(self, user_id: int, product_id: int, quantity: float, price: float) -> Cart:
+    async def execute(
+        self, user_id: int, product_id: int, quantity: float, price: float
+    ) -> Cart:
         """Add item to cart"""
-        from src.domain.value_objects.value_objects import Quantity, Money
 
         cart = await self.cart_repository.get_by_user_id(user_id)
         if not cart:
@@ -34,7 +36,7 @@ class AddToCartUseCase:
         cart.add_item(
             product_id=product_id,
             quantity=Quantity(quantity),
-            price=Money(price)
+            price=Money(price),
         )
         return await self.cart_repository.update(cart)
 

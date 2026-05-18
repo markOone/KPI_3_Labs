@@ -76,7 +76,8 @@ class CartItemMapper:
         return CartItem(
             id=orm_item.id,
             product_id=orm_item.product_id,
-            quantity=Quantity(float(orm_item.quantity))
+            quantity=Quantity(float(orm_item.quantity)),
+            price=Money(float(orm_item.price))
         )
 
     @staticmethod
@@ -84,7 +85,8 @@ class CartItemMapper:
         return CartItemModel(
             id=domain_item.id,
             product_id=domain_item.product_id,
-            quantity=int(domain_item.quantity.value)
+            quantity=int(domain_item.quantity.value),
+            price=domain_item.price
         )
 
 

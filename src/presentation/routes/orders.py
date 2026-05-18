@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from domain.repositories.repositories import CartRepository, OrderRepository
+from src.domain.repositories.repositories import CartRepository, OrderRepository
 from src.application.use_cases.order_use_cases import CreateOrderUseCase
 from src.domain.errors.domain_errors import DomainError
 from src.schemas.orders import OrderResponse

@@ -1,13 +1,14 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from infrastructure.repositories.cart_repository import CartRepositoryImpl
-from infrastructure.repositories.order_repository import OrderRepositoryImpl
-from infrastructure.repositories.user_repository import UserRepositoryImpl
+from src.infrastructure.database.models import UserModel
+from src.schemas.auth import UserResponseSchema
+from src.infrastructure.repositories.cart_repository import CartRepositoryImpl
+from src.infrastructure.repositories.order_repository import OrderRepositoryImpl
+from src.infrastructure.repositories.user_repository import UserRepositoryImpl
 from src.exceptions.token import InvalidTokenError
 from src.config.settings import settings, AppSettings
-from src.infrastructure.database.models import User
 from src.infrastructure.repositories.stock_repository import StockRepositoryImpl
 from src.infrastructure.engine import db_helper
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,7 +49,9 @@ async def get_jwt_manager(settings: AppSettings = Depends(get_settings)) -> JWTM
 
 async def get_user_by_name(username, db):
     result = await db.execute(
-        select(User).where(User.username == username).options(selectinload(User.group))
+        select(UserModel)
+        .where(UserModel.username == username)
+        .options(selectinload(UserModel.group))
     )
     return result.scalar_one_or_none()
 
@@ -57,7 +60,7 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(db_helper.get_db_session),
     jwt_manager: JWTManager = Depends(get_jwt_manager),
-) -> User:
+) -> UserResponseSchema:
     try:
         payload = jwt_manager.decode_access_token(token)
         # print(payload)
@@ -73,7 +76,7 @@ async def get_current_user(
     return user
 
 
-async def require_admin(current_user: User = Depends(get_current_user)):
+async def require_admin(current_user: UserResponseSchema = Depends(get_current_user)):
     # print(current_user.group.name)
     if current_user.group.name != "Admin":
         raise HTTPException(

@@ -7,6 +7,7 @@ from src.domain.value_objects.value_objects import Email, Money, Quantity, Sku
 @dataclass
 class Product:
     """Domain Product entity"""
+
     id: int
     name: str
     sku: Sku
@@ -24,6 +25,7 @@ class Product:
 @dataclass
 class Stock:
     """Domain Stock entity"""
+
     id: int
     product_id: int
     quantity: Quantity
@@ -44,6 +46,7 @@ class Stock:
 @dataclass
 class User:
     """Domain User entity"""
+
     id: int
     email: Email
     username: str
@@ -59,6 +62,7 @@ class User:
 @dataclass
 class CartItem:
     """Domain CartItem entity"""
+
     id: int
     product_id: int
     quantity: Quantity
@@ -71,6 +75,7 @@ class CartItem:
 @dataclass
 class Cart:
     """Domain Cart aggregate root"""
+
     id: int
     user_id: int
     items: List[CartItem]
@@ -81,7 +86,9 @@ class Cart:
             if item.product_id == product_id:
                 item.quantity = item.quantity + quantity
                 return
-        self.items.append(CartItem(id=0, product_id=product_id, quantity=quantity, price=price))
+        self.items.append(
+            CartItem(id=0, product_id=product_id, quantity=quantity, price=price)
+        )
 
     def remove_item(self, product_id: int) -> None:
         """Remove item from cart"""
@@ -102,6 +109,7 @@ class Cart:
 @dataclass
 class OrderItem:
     """Domain OrderItem entity"""
+
     id: int
     product_id: int
     quantity: Quantity
@@ -114,6 +122,7 @@ class OrderItem:
 @dataclass
 class Order:
     """Domain Order aggregate root"""
+
     id: int
     user_id: int
     items: List[OrderItem]
@@ -129,5 +138,11 @@ class Order:
         """Validate order invariants"""
         if not self.items or len(self.items) == 0:
             raise ValueError("Order must have at least one item")
-        if self.status not in ["pending", "confirmed", "shipped", "delivered", "cancelled"]:
+        if self.status not in [
+            "pending",
+            "confirmed",
+            "shipped",
+            "delivered",
+            "cancelled",
+        ]:
             raise ValueError(f"Invalid order status: {self.status}")

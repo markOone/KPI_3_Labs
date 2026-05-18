@@ -1,5 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
-from decimal import Decimal
+from pydantic import BaseModel
 
 
 class CartItemAdd(BaseModel):

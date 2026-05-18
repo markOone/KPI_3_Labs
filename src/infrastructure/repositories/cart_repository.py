@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload, joinedload
 
+from src.domain.value_objects.value_objects import Money
 from src.domain.entities.entities import Cart, CartItem as DomainCartItem
 from src.domain.repositories.repositories import CartRepository
 from src.infrastructure.database.models import CartItemModel, CartModel
@@ -80,8 +81,8 @@ class CartRepositoryImpl(CartRepository):
                     DomainCartItem( 
                         id=orm_item.id,
                         product_id=orm_item.product_id,
-                        quantity=Quantity(orm_item.quantity), 
-                        price=item_price                    
+                        quantity=orm_item.quantity,
+                        price=orm_item.product.price if orm_item.product else Money(0),
                     )
                 )
             cart.items = updated_items

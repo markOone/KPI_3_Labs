@@ -1,4 +1,4 @@
-from domain.repositories.repositories import StockRepository
+from src.domain.repositories.repositories import StockRepository
 
 
 class UpdateStockUseCase:

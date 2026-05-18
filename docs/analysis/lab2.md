@@ -171,7 +171,7 @@ class MongoProductRepositoryImpl(ProductRepository):
 1. **Захист інваріантів**
    ```python
    # Rich: логіка у домену
-   cart.add_item(product_id, quantity, price)  # Валідація всередині
+   cart.add_item(product_id, quantity)  # Валідація всередині
    
    # Anemic: логіка у use case
    if quantity <= 0:
@@ -193,7 +193,7 @@ class MongoProductRepositoryImpl(ProductRepository):
    # Rich: тест просто — немає залежностей
    def test_cart_add_item():
        cart = Cart(...)
-       cart.add_item(1, Quantity(5), Money(100))
+       cart.add_item(1, Quantity(5))
        assert len(cart.items) == 1
    
    # Anemic: тестувати легко, але логіка розсіяна

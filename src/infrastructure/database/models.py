@@ -87,6 +87,7 @@ class CartItemModel(Base):
     cart_id: Mapped[int] = mapped_column(ForeignKey("carts.id"))
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
     quantity: Mapped[float] = mapped_column(Integer, default=1)
+    price: Mapped[float] = mapped_column(Numeric(10, 2))
 
     cart: Mapped["CartModel"] = relationship(back_populates="items")
     product: Mapped["ProductModel"] = relationship(back_populates="cart_items")
