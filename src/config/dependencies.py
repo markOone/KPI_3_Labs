@@ -2,6 +2,9 @@ from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select, text
 from sqlalchemy.orm import selectinload
+from infrastructure.repositories.cart_repository import CartRepositoryImpl
+from infrastructure.repositories.order_repository import OrderRepositoryImpl
+from infrastructure.repositories.user_repository import UserRepositoryImpl
 from src.exceptions.token import InvalidTokenError
 from src.config.settings import settings, AppSettings
 from src.infrastructure.database.models import User
@@ -20,6 +23,18 @@ async def get_settings() -> AppSettings:
 
 async def get_stock_repository(db: AsyncSession = Depends(db_helper.get_db_session)):
     return StockRepositoryImpl(db)
+
+
+async def get_order_repository(db: AsyncSession = Depends(db_helper.get_db_session)):
+    return OrderRepositoryImpl(db)
+
+
+async def get_cart_repository(db: AsyncSession = Depends(db_helper.get_db_session)):
+    return CartRepositoryImpl(db)
+
+
+async def get_user_repository(db: AsyncSession = Depends(db_helper.get_db_session)):
+    return UserRepositoryImpl(db)
 
 
 async def get_jwt_manager(settings: AppSettings = Depends(get_settings)) -> JWTManager:
