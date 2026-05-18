@@ -4,8 +4,9 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import selectinload
 from src.exceptions.token import InvalidTokenError
 from src.config.settings import settings, AppSettings
-from src.database.models import User
-from src.database.engine import db_helper
+from src.infrastructure.database.models import User
+from src.infrastructure.repositories.stock_repository import StockRepositoryImpl
+from src.infrastructure.engine import db_helper
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth.services import JWTManager
 from jose import JWTError
@@ -15,6 +16,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 async def get_settings() -> AppSettings:
     return settings
+
+
+async def get_stock_repository(db: AsyncSession = Depends(db_helper.get_db_session)):
+    return StockRepositoryImpl(db)
 
 
 async def get_jwt_manager(settings: AppSettings = Depends(get_settings)) -> JWTManager:

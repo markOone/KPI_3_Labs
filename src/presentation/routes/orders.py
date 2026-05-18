@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.database.engine import db_helper
+from src.infrastructure.engine import db_helper
 from src.infrastructure.repositories.order_repository import OrderRepositoryImpl
 from src.infrastructure.repositories.cart_repository import CartRepositoryImpl
 from src.infrastructure.repositories.stock_repository import StockRepositoryImpl
@@ -8,7 +8,7 @@ from src.application.use_cases.order_use_cases import CreateOrderUseCase
 from src.domain.errors.domain_errors import DomainError
 from src.schemas.orders import OrderResponse
 from src.config.dependencies import get_current_user
-from src.database.models import User
+from src.infrastructure.database.models import UserModel as User
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -25,7 +25,6 @@ async def get_cart_repository(db: AsyncSession = Depends(db_helper.get_db_sessio
     "/checkout", response_model=OrderResponse, status_code=status.HTTP_201_CREATED
 )
 async def process_checkout(
-    db: AsyncSession = Depends(db_helper.get_db_session),
     user: User = Depends(get_current_user),
     order_repo: OrderRepositoryImpl = Depends(get_order_repository),
     cart_repo: CartRepositoryImpl = Depends(get_cart_repository),

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.database.engine import db_helper
+from src.infrastructure.engine import db_helper
 from src.infrastructure.repositories.cart_repository import CartRepositoryImpl
 from src.infrastructure.repositories.product_repository import ProductRepositoryImpl
 from src.infrastructure.repositories.stock_repository import StockRepositoryImpl
@@ -10,7 +10,7 @@ from src.application.use_cases.cart_use_cases import (
     ClearCartUseCase,
 )
 from src.schemas.cart import CartItemAdd, CartItemResponse
-from src.database.models import User
+from src.infrastructure.database.models import UserModel as User
 from src.config.dependencies import get_current_user
 from src.domain.entities.entities import Cart as DomainCart
 
