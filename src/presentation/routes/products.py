@@ -3,12 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
 from src.infrastructure.engine import db_helper
-from src.application.use_cases.create_product_use_case import CreateProductUseCase
 from src.application.use_cases.product_use_cases import (
     GetProductUseCase,
     GetAllProductsUseCase,
     UpdateProductUseCase,
     DeleteProductUseCase,
+    CreateProductUseCase,
 )
 from src.infrastructure.repositories.product_repository import ProductRepositoryImpl
 from src.domain.errors.domain_errors import (

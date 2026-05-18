@@ -31,7 +31,7 @@ class CartRepositoryImpl(CartRepository):
                 id=i.id,
                 product_id=i.product_id,
                 quantity=Quantity(i.quantity),
-                price=Money(float(i.product.price) if i.product else 0.0) 
+                price=Money(float(i.product.price) if i.product else 0.0),
             )
             for i in orm_cart.items
         ]
