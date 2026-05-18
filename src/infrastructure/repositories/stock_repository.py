@@ -20,11 +20,10 @@ class StockRepositoryImpl(StockRepository):
 
     async def create(self, stock: Stock) -> Stock:
         orm_stock = StockModel(
-            product_id=stock.product_id,
-            quantity=int(stock.quantity.value)
+            product_id=stock.product_id, quantity=int(stock.quantity.value)
         )
         self.session.add(orm_stock)
-        await self.session.flush()
+        await self.session.commit()
         stock.id = orm_stock.id
         return stock
 
@@ -35,6 +34,6 @@ class StockRepositoryImpl(StockRepository):
 
         if orm_stock:
             orm_stock.quantity = int(stock.quantity.value)
-            await self.session.flush()
+            await self.session.commit()
 
         return stock

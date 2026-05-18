@@ -1,3 +1,4 @@
+from src.domain.value_objects.value_objects import Quantity
 from src.domain.repositories.repositories import StockRepository
 
 
@@ -6,11 +7,11 @@ class UpdateStockUseCase:
         self.stock_repository = stock_repository
 
     async def execute(self, product_id: int, quantity: int):
-        stock = await self.stock_repository.get_stock_by_product_id(product_id)
+        stock = await self.stock_repository.get_by_product_id(product_id)
         if not stock:
             raise ValueError("Stock not found for the given product ID")
-        stock.quantity = quantity
-        await self.stock_repository.update_stock(stock)
+        stock.quantity = Quantity(quantity)
+        await self.stock_repository.update(stock)
 
 
 class GetStockUseCase:
