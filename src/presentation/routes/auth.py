@@ -1,36 +1,49 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.ext.asyncio import AsyncSession
-from src.infrastructure.engine import db_helper
+from application.use_cases.cart_use_cases import CreateEmptyCartUseCase
+from domain.repositories.repositories import (
+    CartRepository,
+    UserRepository,
+)
 from src.infrastructure.repositories.user_repository import UserRepositoryImpl
-from src.application.use_cases.auth_use_cases import RegisterUserUseCase
+from src.application.use_cases.auth_use_cases import LoginUseCase, RegisterUserUseCase
 from src.domain.errors.domain_errors import (
     EmailAlreadyExistsError,
     UsernameAlreadyExistsError,
 )
-from src.config.dependencies import get_current_user, get_jwt_manager
-from src.schemas.auth import TokenResponse, UserRegisterSchema, UserResponseSchema
-from src.auth.hashing import Hasher
+from src.config.dependencies import (
+    get_cart_repository,
+    get_current_user,
+    get_jwt_manager,
+    get_user_repository,
+)
+from src.schemas.auth import (
+    TokenResponse,
+    UserLoginSchema,
+    UserRegisterSchema,
+    UserResponseSchema,
+)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-
-
-async def get_user_repository(db: AsyncSession = Depends(db_helper.get_db_session)):
-    return UserRepositoryImpl(db)
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
     data: UserRegisterSchema,
-    user_repo: UserRepositoryImpl = Depends(get_user_repository),
+    user_repo: UserRepository = Depends(get_user_repository),
+    cart_repo: CartRepository = Depends(get_cart_repository),
 ):
     use_case = RegisterUserUseCase(user_repo)
+    cart_use_case = CreateEmptyCartUseCase(cart_repo)
     try:
-        await use_case.execute(
+        user_id = use_case.execute(
             username=data.username, email=data.email, password_plain=data.password
         )
-        
-        return {"status": "success"}
+
+        await cart_use_case.execute(user_id=user_id)
+        return HTTPException(
+            status_code=status.HTTP_201_CREATED, detail="User registered successfully."
+        )
     except (EmailAlreadyExistsError, UsernameAlreadyExistsError) as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
@@ -41,11 +54,15 @@ async def login(
     user_repo: UserRepositoryImpl = Depends(get_user_repository),
     jwt_manager=Depends(get_jwt_manager),
 ):
-    user = await user_repo.get_by_username(data.username)
-    if not user or not Hasher.verify_password(data.password, user.password_hash):
+
+    data = UserLoginSchema(username=data.username, password=data.password)
+    use_case = LoginUseCase(user_repo)
+
+    try:
+        user = await use_case.execute(username=data.username, password=data.password)
+    except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
 
     payload = {"sub": str(user.id), "username": user.username}
