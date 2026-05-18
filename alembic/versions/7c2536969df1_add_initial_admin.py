@@ -31,12 +31,40 @@ def upgrade() -> None:
     admin_username = settings.admin.username
     admin_password = Hasher.get_password_hash(settings.admin.password)
 
-    op.execute(sa.text(f"""
+    result = connection.execute(
+        sa.text("""
             INSERT INTO users (email, username, password_hash, group_id)
-            VALUES ('{admin_email}', '{admin_username}', '{admin_password}', {group_id})
-            ON CONFLICT (email) DO NOTHING;
-            """))
+            VALUES (:email, :username, :password, :group_id)
+            ON CONFLICT (email) DO UPDATE SET username = EXCLUDED.username
+            RETURNING id;
+        """),
+        {
+            "email": admin_email,
+            "username": admin_username,
+            "password": admin_password,
+            "group_id": group_id,
+        },
+    )
+    admin_id = result.scalar()
+
+    if admin_id:
+        connection.execute(
+            sa.text("""
+                INSERT INTO carts (user_id)
+                VALUES (:user_id)
+                ON CONFLICT (user_id) DO NOTHING;
+            """),
+            {"user_id": admin_id},
+        )
 
 
 def downgrade() -> None:
-    op.execute(sa.text("DELETE FROM users WHERE username = 'admin'"))
+    connection = op.get_bind()
+    admin_id = connection.execute(
+        sa.text("SELECT id FROM users WHERE username = :username"),
+        {"username": settings.admin.username},
+    ).scalar()
+
+    if admin_id:
+        op.execute(sa.text(f"DELETE FROM carts WHERE user_id = {admin_id}"))
+        op.execute(sa.text(f"DELETE FROM users WHERE id = {admin_id}"))
