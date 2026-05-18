@@ -1,24 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from src.infrastructure.engine import db_helper
-from src.infrastructure.repositories.order_repository import OrderRepositoryImpl
-from src.infrastructure.repositories.cart_repository import CartRepositoryImpl
-from src.infrastructure.repositories.stock_repository import StockRepositoryImpl
+from domain.repositories.repositories import CartRepository, OrderRepository
 from src.application.use_cases.order_use_cases import CreateOrderUseCase
 from src.domain.errors.domain_errors import DomainError
 from src.schemas.orders import OrderResponse
-from src.config.dependencies import get_current_user
+from src.config.dependencies import (
+    get_cart_repository,
+    get_current_user,
+    get_order_repository,
+)
 from src.infrastructure.database.models import UserModel as User
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
-
-
-async def get_order_repository(db: AsyncSession = Depends(db_helper.get_db_session)):
-    return OrderRepositoryImpl(db)
-
-
-async def get_cart_repository(db: AsyncSession = Depends(db_helper.get_db_session)):
-    return CartRepositoryImpl(db)
 
 
 @router.post(
@@ -26,8 +18,8 @@ async def get_cart_repository(db: AsyncSession = Depends(db_helper.get_db_sessio
 )
 async def process_checkout(
     user: User = Depends(get_current_user),
-    order_repo: OrderRepositoryImpl = Depends(get_order_repository),
-    cart_repo: CartRepositoryImpl = Depends(get_cart_repository),
+    order_repo: OrderRepository = Depends(get_order_repository),
+    cart_repo: CartRepository = Depends(get_cart_repository),
 ):
     cart = await cart_repo.get_by_user_id(user.id)
     if not cart or not cart.items:
