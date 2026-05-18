@@ -69,3 +69,19 @@ class ClearCartUseCase:
 
         cart.clear()
         return await self.cart_repository.update(cart)
+
+
+class CreateEmptyCartUseCase:
+    """Use case for creating an empty cart for a new user"""
+
+    def __init__(self, cart_repository: CartRepository):
+        self.cart_repository = cart_repository
+
+    async def execute(self, user_id: int) -> Cart:
+        """Create an empty cart for the user"""
+        existing_cart = await self.cart_repository.get_by_user_id(user_id)
+        if existing_cart:
+            raise DomainError(f"Cart already exists for user {user_id}")
+
+        new_cart = Cart(id=0, user_id=user_id, items=[])
+        return await self.cart_repository.create(new_cart)
